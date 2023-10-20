@@ -326,6 +326,11 @@ void run(char *filename) {
                     if(tokens[i + 2].token == number) {
                         looptimes = atoi(tokens[i + 2].lexeme);
                         loopArgs = false;
+                    } else if(tokens[i + 2].token == mention_cell) {
+                        if(tokens[i + 3].token == number) {
+                            looptimes = langarr[atoi(tokens[i + 3].lexeme)];
+                            loopArgs = false;
+                        }
                     }
                 } else {
                     looptimes = langarr[currentIndex];
