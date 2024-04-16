@@ -1,2 +1,2 @@
 feedme : feedmei.c
-	${CC} feedmei.c -o feedmei
+	clang ./src/feedmei.c -o feedmei
