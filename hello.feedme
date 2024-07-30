@@ -1,1 +1,1 @@
-@H @e @l @l @o @, @\w @W @o @r @l @d @! @\n:
+."Hello, world!" each_ptr(print_chr)
