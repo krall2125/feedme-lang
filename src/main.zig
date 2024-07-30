@@ -1,5 +1,6 @@
 const std = @import("std");
 const lexer = @import("lexer.zig");
+const compiler = @import("compiler.zig");
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var print_debug_info = false;
