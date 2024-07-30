@@ -1,10 +1,10 @@
 const std = @import("std");
 const lexer = @import("lexer.zig");
-const compiler = @import("compiler.zig");
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+var print_debug_info = false;
 
-const build_nr = 6;
+const build_nr = 9;
 
 pub fn main() !void {
     std.debug.print("feedme-lang InDevelopment Build {d}\n", .{ build_nr });
@@ -13,7 +13,7 @@ pub fn main() !void {
     // Get the command line arguments
     // *
     if (std.os.argv.len == 1) {
-        std.debug.print("Usage: feedme-lang [filename]\n", .{});
+        std.debug.print("Usage: feedme-lang <options> [filename]\n", .{});
         return;
     }
 
@@ -23,25 +23,29 @@ pub fn main() !void {
     // Loop through the arguments, where arg is type [*:0]u8
     // *
     for (args) |arg| {
+        if (arg[0] == '-') {
+            if (std.mem.len(arg) == 1) {
+                std.debug.print("Incomplete option.\n", .{});
+                return;
+            }
+
+            const arg_rest = std.mem.span(arg[1..]);
+
+            if (std.mem.eql(u8, arg_rest, "debug")) {
+                print_debug_info = true;
+            }
+            continue;
+        }
+
         // *
         // Lex the script
         // *
         var tokens: std.ArrayList(lexer.Token) = try lexer.lex(arg);
 
         // *
-        // Prepare the compiler
-        // *
-        var t_compiler: compiler.Compiler = compiler.Compiler {
-            .operations = undefined,
-            .tokens = tokens,
-            .iterator = 0,
-            .print_debug_info = true
-        };
-
-        // *
         // Print debug info about the tokens
         // *
-        if (t_compiler.print_debug_info) {
+        if (print_debug_info) {
             // *
             // Print the header
             // *
@@ -75,11 +79,6 @@ pub fn main() !void {
             // *
             std.debug.print("<---> {s: ^48} <--->\n", .{ "END TOKEN DUMP" });
         }
-
-        // *
-        // Parse the tokens
-        // *
-        try t_compiler.parse();
 
         // *
         // Free the tokens
