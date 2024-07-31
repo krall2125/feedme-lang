@@ -31,6 +31,9 @@ pub const TokenType = enum {
     Dot,
     Comma,
     Dollar,
+    Equal, // not the same as Eq
+    Semicolon,
+    Pipe,
 
     If,
     Else,
@@ -41,6 +44,7 @@ pub const TokenType = enum {
     Gt,
     Gteq,
     Lteq,
+    Not,
     each_ptr,
     print_chr,
     print_num,
@@ -290,6 +294,11 @@ fn lex_character(lines: []u8, i: *u32) !Token {
         },
         '$' => {
             var token = Token{.t = TokenType.Dollar, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            try token.l.append(lines[i.*]);
+            return token;
+        },
+        '!' => {
+            var token = Token{.t = TokenType.Not, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
             try token.l.append(lines[i.*]);
             return token;
         },

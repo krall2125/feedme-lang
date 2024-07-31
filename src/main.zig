@@ -5,7 +5,7 @@ const compiler = @import("compiler.zig");
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var print_debug_info = false;
 
-const build_nr = 9;
+const build_nr = 13;
 
 pub fn main() !void {
     std.debug.print("feedme-lang InDevelopment Build {d}\n", .{ build_nr });
