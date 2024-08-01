@@ -13,7 +13,7 @@ pub const TokenType = enum {
     FloatConstant,
     StringConstant,
 
-    AddressOf,
+    Ampersand,
     Deref,
     Add,
     Subtract,
@@ -45,6 +45,8 @@ pub const TokenType = enum {
     Gteq,
     Lteq,
     Not,
+    Var,
+    Const,
     each_ptr,
     print_chr,
     print_num,
@@ -172,6 +174,12 @@ fn lex_identifier(lines: []u8, i: *u32) !Token {
     else if (std.mem.eql(u8, token.l.items, "dbg")) {
         token.t = TokenType.SpecialDbg;
     }
+    else if (std.mem.eql(u8, token.l.items, "var")) {
+        token.t = TokenType.Var;
+    }
+    else if (std.mem.eql(u8, token.l.items, "const")) {
+        token.t = TokenType.Const;
+    }
     else if (std.mem.eql(u8, token.l.items, "each_ptr")) {
         token.t = TokenType.each_ptr;
     }
@@ -213,7 +221,7 @@ fn lex_string(lines: []u8, i: *u32) !Token {
 fn lex_character(lines: []u8, i: *u32) !Token {
     switch (lines[i.*]) {
         '&' => {
-            var token = Token{.t = TokenType.AddressOf, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            var token = Token{.t = TokenType.Ampersand, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
             try token.l.append(lines[i.*]);
             return token;
         },
@@ -299,6 +307,21 @@ fn lex_character(lines: []u8, i: *u32) !Token {
         },
         '!' => {
             var token = Token{.t = TokenType.Not, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            try token.l.append(lines[i.*]);
+            return token;
+        },
+        '=' => {
+            var token = Token{.t = TokenType.Equal, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            try token.l.append(lines[i.*]);
+            return token;
+        },
+        ';' => {
+            var token = Token{.t = TokenType.Semicolon, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            try token.l.append(lines[i.*]);
+            return token;
+        },
+        '|' => {
+            var token = Token{.t = TokenType.Pipe, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
             try token.l.append(lines[i.*]);
             return token;
         },

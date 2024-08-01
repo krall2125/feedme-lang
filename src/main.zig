@@ -5,7 +5,7 @@ const compiler = @import("compiler.zig");
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var print_debug_info = false;
 
-const build_nr = 13;
+const build_nr = 19;
 
 pub fn main() !void {
     std.debug.print("feedme-lang InDevelopment Build {d}\n", .{ build_nr });
@@ -80,6 +80,14 @@ pub fn main() !void {
             // *
             std.debug.print("<---> {s: ^48} <--->\n", .{ "END TOKEN DUMP" });
         }
+
+        var c: compiler.Compiler = compiler.Compiler {
+            .tokens = &tokens,
+            .debug_flag = print_debug_info,
+            .i = 0
+        };
+
+        _ = c.expression();
 
         // *
         // Free the tokens
