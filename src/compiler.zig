@@ -10,59 +10,94 @@ const OperatorContext = enum {
     Prefix,
     Infix,
     Postfix,
-    None,   // for literal expressions - they technically do not count as any kind of operator
+    None,
 };
 
-fn op_precedence(t: TokenType, ctx: OperatorContext) u8 {
+const Precedence = enum {
+    Assign,
+    Comma,
+    And,
+    Equality,
+    Comparison,
+    Term,
+    Factor,
+    Unary,
+    Grouping,
+    Primary,
+    None,
+    Some
+};
+
+fn op_precedence(t: TokenType, ctx: OperatorContext) Precedence {
     return switch (t) {
         TokenType.Equal =>
             switch (ctx) {
-                OperatorContext.Infix => 1,
-                else => 0
-            },                                               // = operator for variable assignment
+                OperatorContext.Infix => Precedence.Assign,
+                OperatorContext.None => Precedence.Some,
+                else => Precedence.None
+            },
 
         TokenType.Comma =>
             switch (ctx) {
-                OperatorContext.Infix => 2,
-                else => 0
-            },                                               // , operator for comma expressions
+                OperatorContext.Infix => Precedence.Comma,
+                OperatorContext.None => Precedence.Some,
+                else => Precedence.None
+            },
 
         TokenType.Ampersand =>
             switch (ctx) {
-                OperatorContext.Prefix => 6,
-                OperatorContext.Infix => 3,
-                else => 0
+                OperatorContext.Prefix => Precedence.Unary,
+                OperatorContext.Infix => Precedence.And,
+                OperatorContext.None => Precedence.Some,
+                else => Precedence.None
             },
 
         TokenType.Eq, TokenType.Neq =>
             switch (ctx) {
-                OperatorContext.Infix => 4,
-                else => 0
-            },                                              // Equality operators
+                OperatorContext.Infix => Precedence.Equality,
+                OperatorContext.None => Precedence.Some,
+                else => Precedence.None
+            },
 
         TokenType.Lt, TokenType.Lteq, TokenType.Gt, TokenType.Gteq =>
             switch (ctx) {
-                OperatorContext.Infix => 5,
-                else => 0
-            },                                              // Comparsion operators, greater than etc.
+                OperatorContext.Infix => Precedence.Comparison,
+                OperatorContext.None => Precedence.Some,
+                else => Precedence.None
+            },
+
+        TokenType.Add, TokenType.Subtract =>
+            switch (ctx) {
+                OperatorContext.Prefix => Precedence.Unary,
+                OperatorContext.Infix => Precedence.Term,
+                OperatorContext.None => Precedence.Some,
+                else => Precedence.None
+            },
+
+        TokenType.Multiply, TokenType.Divide, TokenType.Modulo =>
+            switch (ctx) {
+                OperatorContext.Infix => Precedence.Factor,
+                else => Precedence.None
+            },
 
         TokenType.Not, TokenType.Deref =>
             switch (ctx) {
-                OperatorContext.Prefix => 6,
-                else => 0
-            },                                              // Various value-modifying prefix operators
+                OperatorContext.Prefix => Precedence.Unary,
+                OperatorContext.None => Precedence.Some,
+                else => Precedence.None
+            },
 
+        TokenType.OpenRound => Precedence.Grouping,
 
         TokenType.StringConstant,
         TokenType.IntegerConstant,
         TokenType.FloatConstant,
-        TokenType.Identifier => 7,                                          // Constants
-
-        TokenType.OpenRound => 8,                                           // ( for grouping
-        TokenType.Colon => 9,                                               // : operator for static typing
-        else => 0
+        TokenType.Identifier => Precedence.Primary,
+        else => Precedence.None
     };
 }
+
+// Every operator which can vary in the context returns Precedence.Some on OperatorContext.None for the program to know that they have some sort of precedence.
 
 const ExprType = enum {
     Literal,
@@ -74,7 +109,7 @@ const Expr = struct {
     operands: std.ArrayList(Expr),
     operator: TokenType,
     t: ExprType,
-    // fn eval(self: *Expr) !f64 {
+    // fn eval(self: *Expr) !std.ArrayList(f64) {
 
     // }
 };
@@ -92,66 +127,15 @@ pub const Compiler = struct {
         std.debug.print(fmt, args);
     }
 
-    pub fn expression(self: *Compiler) Expr {
-        var lowest_precedence: u8 = 9;
-        var lowest_precedence_pos: usize = 0;
-        var ctx: OperatorContext = undefined;
+    pub fn expression(self: *Compiler, lastindex: usize) Expr {
+        const expr: Expr = Expr {
+            .t = undefined,
+            .operands = std.ArrayList(Expr).init(gpa.allocator()),
+            .operator = undefined
+        };
 
-        const root: Expr = undefined;
-
-        // Parse and evaluate and print single expression?
-        while (self.i < self.tokens.items.len) : (self.i += 1) {
-            if (self.debug_flag) {
-                std.debug.print("Current token: '{s}', {s}, {d}\n", .{ self.tokens.items[self.i].l.items, @tagName(self.tokens.items[self.i].t), self.tokens.items[self.i].line });
-            }
-
-            if (self.tokens.items[self.i].t == TokenType.Eof) break;
-
-            if (self.i + 1 < self.tokens.items.len) {
-                const is_current_literal_expr = op_precedence(self.tokens.items[self.i].t, OperatorContext.Prefix) == 7;
-
-                const is_next_literal_expr = op_precedence(self.tokens.items[self.i + 1].t, OperatorContext.Prefix) == 7;
-                const is_prev_literal_expr = self.i > 0 and self.i - 1 < self.tokens.items.len and op_precedence(self.tokens.items[self.i - 1].t, OperatorContext.Prefix) == 7;
-
-                if ((is_current_literal_expr and is_next_literal_expr) or (is_current_literal_expr and is_prev_literal_expr)) {
-                    self.error_report("Invalid expression: two literal expressions, one after another.\nPlease, check the ordering of your code.\n", .{ });
-                }
-                else if (is_current_literal_expr) {
-                    continue;
-                }
-
-                if (is_next_literal_expr and is_prev_literal_expr) {
-                    ctx = OperatorContext.Infix;
-                }
-                else if (is_next_literal_expr) {
-                    ctx = OperatorContext.Prefix;
-                }
-                else if (is_prev_literal_expr) {
-                    ctx = OperatorContext.Postfix;
-                }
-                else {
-                    continue;
-                }
-            }
-
-            // 2 + 2 * 2 - 5
-            // -
-            // |\
-            // + 5
-            // |\
-            // * 2
-            // |\
-            // 2 2
-
-            if (op_precedence(self.tokens.items[self.i].t, ctx) < lowest_precedence) {
-                lowest_precedence = op_precedence(self.tokens.items[self.i].t, ctx);
-                lowest_precedence_pos = self.i;
-            }
-        }
-
-        std.debug.print("lowest precedence token: {s}, {d}\n", .{ @tagName(self.tokens.items[lowest_precedence_pos].t), lowest_precedence_pos });
-
-        return root;
+        // TODO: better expression parsing
+        return expr;
     }
 
 };
