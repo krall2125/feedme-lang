@@ -1,2 +1,1 @@
-2 eq 1, a = 4 + 5 lt 6
-// should eval to [false, false]
+2 + 2 * 2

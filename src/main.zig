@@ -1,11 +1,11 @@
 const std = @import("std");
 const lexer = @import("lexer.zig");
-// const compiler = @import("compiler.zig");
+const compiler = @import("compiler.zig");
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var print_debug_info = false;
 
-const build_nr = 36;
+const build_nr = 69;
 
 pub fn main() !void {
     std.debug.print("feedme-lang InDevelopment Build {d}\n", .{ build_nr });
@@ -74,7 +74,6 @@ pub fn main() !void {
                 // Print the current token's info
                 // *
                 std.debug.print(" <--> {s: ^48} <-->\n", .{ allocation });
-                token.l.deinit();
             }
             // *
             // Print the footer
@@ -87,6 +86,16 @@ pub fn main() !void {
         //     .debug_flag = print_debug_info,
         //     .i = 0
         // };
+
+        var c: compiler.Compiler = compiler.Compiler.init(&tokens, print_debug_info);
+
+        c.expression();
+
+        std.debug.print("\n", .{});
+
+        for (tokens.items) |*token| {
+            token.l.deinit();
+        }
 
         // _ = c.expression();
 
