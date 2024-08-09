@@ -13,7 +13,7 @@ pub const TokenType = enum {
     FloatConstant,
     StringConstant,
 
-    AddressOf,
+    Ampersand,
     Deref,
     Add,
     Subtract,
@@ -31,6 +31,9 @@ pub const TokenType = enum {
     Dot,
     Comma,
     Dollar,
+    Equal, // not the same as Eq
+    Semicolon,
+    Pipe,
 
     If,
     Else,
@@ -41,6 +44,9 @@ pub const TokenType = enum {
     Gt,
     Gteq,
     Lteq,
+    Not,
+    Var,
+    Const,
     each_ptr,
     print_chr,
     print_num,
@@ -168,6 +174,12 @@ fn lex_identifier(lines: []u8, i: *u32) !Token {
     else if (std.mem.eql(u8, token.l.items, "dbg")) {
         token.t = TokenType.SpecialDbg;
     }
+    else if (std.mem.eql(u8, token.l.items, "var")) {
+        token.t = TokenType.Var;
+    }
+    else if (std.mem.eql(u8, token.l.items, "const")) {
+        token.t = TokenType.Const;
+    }
     else if (std.mem.eql(u8, token.l.items, "each_ptr")) {
         token.t = TokenType.each_ptr;
     }
@@ -207,110 +219,137 @@ fn lex_string(lines: []u8, i: *u32) !Token {
 }
 
 fn lex_character(lines: []u8, i: *u32) !Token {
+    var token = empty_token();
     switch (lines[i.*]) {
         '&' => {
-            var token = Token{.t = TokenType.AddressOf, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Ampersand;
             try token.l.append(lines[i.*]);
             return token;
         },
         '^' => {
-            var token = Token{.t = TokenType.Deref, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Deref;
             try token.l.append(lines[i.*]);
             return token;
         },
         '+' => {
-            var token = Token{.t = TokenType.Add, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Add;
             try token.l.append(lines[i.*]);
             return token;
         },
         '-' => {
-            var token = Token{.t = TokenType.Subtract, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Subtract;
             try token.l.append(lines[i.*]);
             return token;
         },
         '*' => {
-            var token = Token{.t = TokenType.Multiply, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Multiply;
             try token.l.append(lines[i.*]);
             return token;
         },
         '/' => {
-            var token = Token{.t = TokenType.Divide, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Divide;
             try token.l.append(lines[i.*]);
             return token;
         },
         '%' => {
-            var token = Token{.t = TokenType.Modulo, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Modulo;
             try token.l.append(lines[i.*]);
             return token;
         },
         '(' => {
-            var token = Token{.t = TokenType.OpenRound, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.OpenRound;
             try token.l.append(lines[i.*]);
             return token;
         },
         ')' => {
-            var token = Token{.t = TokenType.CloseRound, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.CloseRound;
             try token.l.append(lines[i.*]);
             return token;
         },
         '[' => {
-            var token = Token{.t = TokenType.OpenSquare, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.OpenSquare;
             try token.l.append(lines[i.*]);
             return token;
         },
         ']' => {
-            var token = Token{.t = TokenType.CloseSquare, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.CloseSquare;
             try token.l.append(lines[i.*]);
             return token;
         },
         '{' => {
-            var token = Token{.t = TokenType.OpenBracket, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.OpenBracket;
             try token.l.append(lines[i.*]);
             return token;
         },
         '}' => {
-            var token = Token{.t = TokenType.CloseBracket, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.CloseBracket;
             try token.l.append(lines[i.*]);
             return token;
         },
         ':' => {
-            var token = Token{.t = TokenType.Colon, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Colon;
             try token.l.append(lines[i.*]);
             return token;
         },
         '.' => {
-            var token = Token{.t = TokenType.Dot, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Dot;
             try token.l.append(lines[i.*]);
             return token;
         },
         ',' => {
-            var token = Token{.t = TokenType.Comma, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Comma;
             try token.l.append(lines[i.*]);
             return token;
         },
         '$' => {
-            var token = Token{.t = TokenType.Dollar, .l = std.ArrayList(u8).init(gpa.allocator()), .line = current_line};
+            token.t = TokenType.Dollar;
+            try token.l.append(lines[i.*]);
+            return token;
+        },
+        '!' => {
+            token.t = TokenType.Not;
+            try token.l.append(lines[i.*]);
+            return token;
+        },
+        '=' => {
+            token.t = TokenType.Equal;
+            try token.l.append(lines[i.*]);
+            return token;
+        },
+        ';' => {
+            token.t = TokenType.Semicolon;
+            try token.l.append(lines[i.*]);
+            return token;
+        },
+        '|' => {
+            token.t = TokenType.Pipe;
             try token.l.append(lines[i.*]);
             return token;
         },
         '\"' => {
+            token.l.deinit();
             return lex_string(lines, i);
         },
         '0'...'9' => {
+            token.l.deinit();
             return lex_numeric_constant(lines, i);
         },
         'a'...'z', 'A'...'Z', '_' => {
+            token.l.deinit();
             return lex_identifier(lines, i);
         },
         ' ', '\t', 0 => {
+            token.l.deinit();
             return empty_token();
         },
         '\n' => {
+            token.l.deinit();
             current_line += 1;
             return empty_token();
         },
         else => {
-            std.debug.print("i like men {d}\n", .{ lines[i.*] });
+            token.l.deinit();
+            std.debug.print("Unrecognized character {d} at line {d}\n", .{ lines[i.*], current_line });
             return empty_token();
         }
     }

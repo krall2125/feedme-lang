@@ -5,7 +5,7 @@ const compiler = @import("compiler.zig");
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var print_debug_info = false;
 
-const build_nr = 9;
+const build_nr = 69;
 
 pub fn main() !void {
     std.debug.print("feedme-lang InDevelopment Build {d}\n", .{ build_nr });
@@ -55,7 +55,7 @@ pub fn main() !void {
             // *
             // Loop through the tokens
             // *
-            for (tokens.items) |token| {
+            for (tokens.items) |*token| {
                 var allocation: []u8 = undefined;
 
                 defer gpa.allocator().free(allocation);
@@ -67,7 +67,7 @@ pub fn main() !void {
                     "[ \"{s}\" {s} {d} ]",
                     .{
                         token.l.items,
-                        @tagName(token.t), token.line
+                        @tagName(token.t), token.line,
                     });
 
                 // *
@@ -80,6 +80,24 @@ pub fn main() !void {
             // *
             std.debug.print("<---> {s: ^48} <--->\n", .{ "END TOKEN DUMP" });
         }
+
+        // var c: compiler.Compiler = compiler.Compiler {
+        //     .tokens = &tokens,
+        //     .debug_flag = print_debug_info,
+        //     .i = 0
+        // };
+
+        var c: compiler.Compiler = compiler.Compiler.init(&tokens, print_debug_info);
+
+        c.expression();
+
+        std.debug.print("\n", .{});
+
+        for (tokens.items) |*token| {
+            token.l.deinit();
+        }
+
+        // _ = c.expression();
 
         // *
         // Free the tokens

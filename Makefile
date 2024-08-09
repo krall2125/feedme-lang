@@ -8,3 +8,6 @@ debug: ./src/main.zig
 
 test: ./src/main.zig
 	zig build test
+
+install: ./feedme-lang
+	install -m 777 ./feedme-lang /usr/local/bin/feedme
